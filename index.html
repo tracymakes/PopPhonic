@@ -1,23 +1,358 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!--
+Let users log into facebook and make animated transitions of their photos
+Users can pick music for the backgrounds
+Data is stored in the url itself. Bitly is used to create a shareable link
 
+//Requirements
+User can't modify an existing album. They're generated automatically and randomly(each time?)
+User must agree to permissions for this to work
+Max bitly link is 2048 characters including http://... to the end of the url
+
+//Flow
+1)	Visitor visits app
+2)	App states:
+	New: never visited before
+	Auth: has just authenticated to facebook and is building a new album
+	Watch: visiting a pre-existing album, comes from bitly. Show album
+	Build: user was authenticated, now building their album
+	
+		*check for permissions. User must have approved all permissions. If missing permissions, show a warning and change to New state
+
+//Effects
+Ken Burns effect (zooming into and out of an image)
+Photo frames (see http://rockyou.com)
+Captions(?)
+Cross fades
+Spin-in/Spin-out
+
+fbauth object in localStorage:
+{
+	state:,
+	fbauth:
+}
+-->
 <meta charset="utf-8" />
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
 <meta name="description" content="" /> 
 <title>PopPhonic</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $(".login").click(function(e) {
-            $("#intro").hide();
-            $("#content").show();
-            return false;
-        });
-    });
-</script>
 <script type="text/javascript" src="http://use.typekit.com/xjt7vjr.js"></script>
 <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+<script type="text/javascript">
+
+var site = 'http://local.mac.com/popphonic/index.html';
+
+var fb = {
+	photos:[], //used to record the images the user selects
+	url: 'https://graph.facebook.com/oauth/authorize?client_id=143905152304182&redirect_uri='+site+'&type=user_agent&display=popup&scope=user_photos',
+	auth: function(){
+		window.location = fb.url;
+	},
+
+	//interacts with the localStorage fbauth object
+	obj: function(prop, val){
+
+		var str = window.localStorage;
+
+		//fbauth doesn't exist in localStorage so create it
+		!str['fbauth'] ? str['fbauth'] = '{"state":"new"}':true;
+
+		//local instance of object to work with
+		var fbobj = JSON.parse(str['fbauth']);
+
+		//set a value
+		if( prop && val ){
+
+			fbobj[prop] = val;
+			str['fbauth'] = JSON.stringify( fbobj );
+
+			return val;
+
+		}else if(prop && !val){
+			//return a value
+			return fbobj[prop];
+		}
+
+		//no arguments specified
+		return false;
+
+	},
+
+	init: function(){
+
+		//if the location search starts with ?p= this should be a view, i.e. someone followed a bitly link
+		if( window.location.search.indexOf('?p=') > -1){
+
+			//change app state
+			fb.obj('state','watch');
+
+			//hide content screen
+			$("#intro, #music-choices, #transition-choices, .choose").hide();
+			$('#content').show();
+			
+			
+			//store photo urls
+			fb.photos = unescape( window.location.search.replace('?p=','') ).split(',');
+
+			//animate photos
+			fb.anim();
+
+		}else{
+
+			//get visitor state
+			var state = fb.obj('state');
+
+			//new
+			if( state === 'new' ){
+				//display intro
+
+				//config auth button
+				$('#connect').click(function(){
+					fb.obj('state','auth');
+					fb.auth();
+				});
+
+			}
+
+			//user is authenticated
+			if( state === 'auth' ){
+
+				//hide intro screen
+				$("#intro").hide();
+
+				//show content screen
+				$("#content").show();
+
+				//get auth token and expires from location hash and store
+				var a = location.hash.split('&');
+				for(var i=0; i<a.length; i++){
+					var b = a[i].replace('#','').split('=');
+					fb.obj(b[0],b[1]);
+				}
+
+				//get list of user albums
+				$.getJSON('https://graph.facebook.com/me/albums?access_token='+ fb.obj('access_token') + '&callback=?', function(obj){
+
+					//cache number of albums
+					var albumlen = obj.data.length;
+
+					//get ids from albums
+					var thumbs = [];
+
+					for(var i=0; i<obj.data.length;i++){
+
+						//loops through all album ids to get their photos
+						$.getJSON('https://graph.facebook.com/'+ obj.data[i].id +'/photos?access_token='+ fb.obj('access_token') + '&callback=?', function(photos){
+
+							//loops through photos in an album
+							for( var c=0; c<photos.data.length; c++ ){
+
+								//store the thumbnails for use in photo picker
+								thumbs.push( {'t':photos.data[c].picture, 's':photos.data[c].source.replace('http://','').replace('.jpg','') } );
+
+							}
+
+							//decrement album length counter 
+							albumlen--;
+							
+							if( albumlen === 0 ){
+
+								//populate photopicker with thumbnails
+								for(var i=0; i<thumbs.length; i++){
+									thumbs[i] = '<img src="'+ thumbs[i].t +'" s="'+ thumbs[i].s +'"/>'
+								}
+								$('#photopicker').append(thumbs.join(''));
+
+								//user now chooses up to 15(?) photos
+								$('#photopicker img').live('click',function(){
+
+									//if image hasn't been selected i.e. doesn't have the 'c' class
+									if( !$(this).hasClass('c') ){
+
+										if( fb.photos.length < 15 ){
+
+											//store the photo in the array
+											fb.photos.push( $(this).attr('s') );
+
+											//add the 'clicked' class
+											$(this).addClass('c');
+
+										}
+
+									}else{
+
+										//get source url on current image
+										var t = $(this).attr('s');
+										for(var i=0;i<fb.photos.length;i++){
+
+											//if the source is in the array
+											if( fb.photos[i] === t ){
+
+												//remove it from the array
+												fb.photos.splice(i,1);
+
+												//remove the class from the image
+												$(this).removeClass('c');
+
+											}
+
+										}
+
+									}
+
+									//update photo count
+									//$('#op span').html( 15-fb.photos.length );
+
+								});
+
+
+								//preview button
+//								$('#pr').click(function(){
+//									
+//									if( fb.photos.length > 0 ){
+//										fb.anim();
+//									}
+//								
+//								});
+
+								//done button
+								$('.choose').click(function(){
+
+									if( fb.photos.length > 0 ){
+
+										//generate bitly link
+										$.getJSON('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab06875d2dac8&format=json&callback=?&longUrl=' + encodeURIComponent(site+'?p='+escape(fb.photos.join(','))) ,function(data){
+											$('#photopicker').empty().append("Here's the link to your slideshow: <input type='text' value='"+ data.data.url +"'/>");
+										});
+
+									}
+
+								});
+
+							}
+							
+						
+						});
+						
+						
+					}
+				
+				});
+
+			}
+		
+		}
+
+	},
+
+	//container for canvased images
+	imgs:[],
+
+	//animation function for the photos
+	anim:function(){
+
+//temporary till animations are in place
+for(var i=0; i<fb.photos.length; i++){
+	$('#photopicker').append('<img src="http://'+ fb.photos[i] +'.jpg"/>');
+}
+
+//		$('#pg').addClass('anim');
+//
+//		$('#op,#pf,#pg').empty();
+//
+//		
+//		$('#pg').append('<canvas width="800" height="600"></canvas>');
+//
+//
+//		//loads images and store in cache
+//		for(var i=0; i<fb.photos.length; i++){
+//
+//			(function(){
+//				
+//				//load images, store in arr
+//				var nimg = new Image();
+//				nimg.onload = function(){
+//
+//					fb.imgs.push({'i':nimg,'w':nimg.width,'h':nimg.height});
+//
+//					//load of all images complete
+//					if( fb.imgs.length === fb.photos.length ){
+//						testrot();
+//					}
+//
+//				}
+//				nimg.src = 'http://'+fb.photos[i]+'.jpg';
+//
+//			})();
+//
+//		}
+//
+//
+//		var testrot = function(){
+//
+//			//display
+//			var index = fb.imgs.length-1;
+//			var oint = setInterval(function(){
+//
+//				var ctx = $('#pg canvas')[0].getContext('2d');
+//
+//				var rot=0;
+//				var iint = setInterval(function(){
+//
+//					rot += 10;
+//					if( rot > 360 ){
+//						clearInterval(iint);
+//					}
+//
+//					var xoffset = 400;
+//					var yoffset = 300;
+//
+//					var w = fb.imgs[index].w;
+//					var h = fb.imgs[index].h;
+//					var angle = 5;
+//
+//					ctx.save();
+//
+//					ctx.clearRect(0, 0, 800, 600);	
+//					ctx.translate(xoffset,yoffset);
+//					ctx.rotate(rot * Math.PI / 180);
+//
+//					ctx.drawImage(fb.imgs[index].i, -w/2,-h/2);
+//
+//					ctx.restore();
+//
+//				},40);
+//
+//				index--;
+//				index === 0? clearInterval(oint):'';
+//
+//			},6000);
+//
+//		}
+
+
+	}
+}
+
+
+
+
+$(document).ready(function(){
+	//DEBUGGING ONLY. REMOVE IN THE END
+	$('#clear').click(function(){
+		delete window.localStorage['fbauth'];
+		window.location = site;
+	});
+
+	fb.init();
+});
+
+
+</script>
+
 <style type="text/css"> 
  
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
@@ -31,16 +366,22 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #content { display:none; text-align:left; width:620px; margin-top:10px; overflow:hidden; }
 #content h1 { font-size:1.2em; }
 #content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
-#photopicker { height:600px; border:10px solid #65948c; margin:20px 0;}
+#photopicker { border:10px solid #65948c; margin:20px 0;}
 #content ul { margin-bottom:20px; width:45%; float:left; }
 #content a { float:right; }
+
+#photopicker .c{
+	border:1px solid #cc0000;
+}
 </style>
 </head>
 <body>
+		<input type="button" id="clear" value="CLEAR localStorage"/>
+		
     <div id="intro">
         <h1>PopPhonic</h1>
         <p>Place your Facebook images in a PopPhonic slideshow and get a musical experience to share with friends.</p>
-        <a href="#" class="login">Log into Facebook to begin</a>
+        <a href="#" class="login" id="connect">Log into Facebook to begin</a>
     </div>
     <div id="content">
         <h1>PopPhonic</h1>
@@ -55,7 +396,7 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
                 <li><input type="radio" name="group1" value="" id="music2"><label for="music2">Music Choice #2</label></li>
                 <li><input type="radio" name="group1" value="" id="music3"><label for="music3">Music Choice #3</label></li>
             </ul>
-            <ul id="trasition-choices">
+            <ul id="transition-choices">
                 <li><input type="radio" name="group2" value="" id="transition1"><label for="transition1">Transition Choice #1</label></li>
                 <li><input type="radio" name="group2" value="" id="transition2"><label for="transition2">Transition Choice #2</label></li>
                 <li><input type="radio" name="group2" value="" id="transition3"><label for="transition3">Transition Choice #3</label></li>
