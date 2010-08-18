@@ -133,6 +133,11 @@ var fb = {
 					fb.obj(b[0],b[1]);
 				}
 
+				//get & set username
+				$.getJSON('https://graph.facebook.com/me?access_token='+fb.obj('access_token') + '&callback=?', function(obj){
+					$('#fbname').html('Hi '+obj.first_name+'!');
+				});
+				
 				//get list of user albums
 				$.getJSON('https://graph.facebook.com/me/albums?access_token='+ fb.obj('access_token') + '&callback=?', function(obj){
 
@@ -373,10 +378,19 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #photopicker .c{
 	border:1px solid #cc0000;
 }
+body{position:relative;}
+/*#show{
+	position:absolute;
+	width:600px;
+	height:400px;
+	top:0;
+	left:0;
+	border:200% solid #000;
+}*/
 </style>
 </head>
 <body>
-		<input type="button" id="clear" value="CLEAR localStorage"/>
+	<input type="button" id="clear" value="CLEAR localStorage"/>
 		
     <div id="intro">
         <h1>PopPhonic</h1>
@@ -385,11 +399,9 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
     </div>
     <div id="content">
         <h1>PopPhonic</h1>
-        <h2>Hi Tracy Osborn!</h2>
+        <h2 id="fbname">Hi Tracy Osborn!</h2>
         <p>Pick your Facebook photos below (up to 15) to include in the slideshow.</p>
-        <div id="photopicker">
-        
-        </div>
+        <div id="photopicker"></div>
         <form>
             <ul id="music-choices">
                 <li><input type="radio" name="group1" value="" id="music1"><label for="music1">Music Choice #1</label></li>
@@ -404,5 +416,7 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
             <a href="#" class="choose">Create your musical slideshow!</a>
         </form>
     </div>
+
+	<div id="show"><canvas></canvas></div>
 </body>
 </html>
