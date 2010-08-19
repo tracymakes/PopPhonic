@@ -348,8 +348,9 @@ for(var i=0; i<fb.photos.length; i++){
 $(document).ready(function(){
 	//DEBUGGING ONLY. REMOVE IN THE END
 	$('#clear').click(function(){
-		delete window.localStorage['fbauth'];
-		window.location = site;
+        delete window.localStorage['fbauth'];
+        window.location.hash = "";
+        window.location.reload();
 	});
 
 	fb.init();
@@ -359,11 +360,10 @@ $(document).ready(function(){
 </script>
 
 <style type="text/css"> 
- 
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
 ol, ul { list-style: none; }
 html { background-color:#75b09e; border-top:10px solid #65948c; }
-body { color:#2f5153; font:62.5%/1.6 'Lucida Grande', Arial, sans-serif; }
+body { color:#2f5153; font:62.5%/1.6 'Lucida Grande', Arial, sans-serif; position:relative; }
 #intro, #content { width:460px; margin:80px auto 80px auto; font-size:1.6em; text-align:center; }
 /* #intro {  display:none; } */
 h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
@@ -371,14 +371,11 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #content { display:none; text-align:left; width:620px; margin-top:10px; overflow:hidden; }
 #content h1 { font-size:1.2em; }
 #content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
-#photopicker { border:10px solid #65948c; margin:20px 0;}
+#photopicker { margin:20px 0;}
+#photopicker img { outline: 10px solid #75b09e; margin: 0 20px 20px 10px; }
 #content ul { margin-bottom:20px; width:45%; float:left; }
 #content a { float:right; }
-
-#photopicker .c{
-	border:1px solid #cc0000;
-}
-body{position:relative;}
+#photopicker .c { outline: 10px solid #65948c; }
 /*#show{
 	position:absolute;
 	width:600px;
@@ -387,6 +384,7 @@ body{position:relative;}
 	left:0;
 	border:200% solid #000;
 }*/
+
 </style>
 </head>
 <body>
