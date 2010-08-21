@@ -377,8 +377,9 @@ var kb = setInterval(function(){
 $(document).ready(function(){
 	//DEBUGGING ONLY. REMOVE IN THE END
 	$('#clear').click(function(){
-		delete window.localStorage['fbauth'];
-		window.location = site;
+        delete window.localStorage['fbauth'];
+        window.location.hash = "";
+        window.location.reload();
 	});
 
 	fb.init();
@@ -419,8 +420,8 @@ $(document).ready(function(){
 	top:50%;
 	margin:-302px 0 0 -201px;
 }
- 
- 
+
+<style type="text/css"> 
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
 ol, ul { list-style: none; }
 html { background-color:#75b09e; border-top:10px solid #65948c; }
@@ -432,29 +433,29 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #content { display:none; text-align:left; width:620px; margin-top:10px; overflow:hidden; }
 #content h1 { font-size:1.2em; }
 #content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
-#photopicker { border:10px solid #65948c; margin:20px 0;}
+#photopicker { margin:20px 0;}
+#photopicker img { outline: 10px solid #75b09e; margin: 0 20px 20px 10px; }
 #content ul { margin-bottom:20px; width:45%; float:left; }
 #content a { float:right; }
 
-#photopicker .c{
-	border:1px solid #cc0000;
-}
+#photopicker .c { outline: 10px solid #65948c; }
 
 #show{
 	border:1px solid #000;
 	position:absolute;
-	top:0;
+	top:0px;
 	right:0;
 	bottom:0;
 	left:0;
 	background: rgba(0, 0, 0, 0.6);
-	
 	display:none;
 }
 	#show div{
 		background-color:#000;
 		position:absolute;	
 	}
+
+
 
 </style>
 </head>
