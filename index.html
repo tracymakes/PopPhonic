@@ -46,6 +46,7 @@ fbauth object in localStorage:
 var site = 'http://local.mac.com/popphonic/index.html';
 
 var fb = {
+	type: undefined,
 	photos:[], //used to record the images the user selects
 	url: 'https://graph.facebook.com/oauth/authorize?client_id=143905152304182&redirect_uri='+site+'&type=user_agent&display=popup&scope=user_photos',
 	auth: function(){
@@ -82,6 +83,15 @@ var fb = {
 	},
 
 	init: function(){
+		//detect the browser type based on css capability
+		var l = document.documentElement;
+		if( l && (s=l.style ) ){
+			fb.type = 'WebkitBorderRadius' in s? 'webkit':
+					'MozBorderRadius'in s? 'moz':
+					'filter' in s? 'ms': 
+					'borderRadius' in s? 'standard':
+					'other';
+		}
 
 		//if the location search starts with ?p= this should be a view, i.e. someone followed a bitly link
 		if( window.location.search.indexOf('?p=') > -1){
@@ -171,13 +181,13 @@ var fb = {
 								}
 								$('#photopicker').append(thumbs.join(''));
 
-								//user now chooses up to 15(?) photos
+								//user now chooses up to 24(?) photos
 								$('#photopicker img').live('click',function(){
 
 									//if image hasn't been selected i.e. doesn't have the 'c' class
 									if( !$(this).hasClass('c') ){
 
-										if( fb.photos.length < 15 ){
+										if( fb.photos.length < 24 ){
 
 											//store the photo in the array
 											fb.photos.push( $(this).attr('s') );
@@ -259,91 +269,110 @@ var fb = {
 	//animation function for the photos
 	anim:function(){
 
-//temporary till animations are in place
-for(var i=0; i<fb.photos.length; i++){
-	$('#photopicker').append('<img src="http://'+ fb.photos[i] +'.jpg"/>');
-}
+		//loads images and store in cache
+		for(var i=0; i<fb.photos.length; i++){
 
-//		$('#pg').addClass('anim');
-//
-//		$('#op,#pf,#pg').empty();
-//
-//		
-//		$('#pg').append('<canvas width="800" height="600"></canvas>');
-//
-//
-//		//loads images and store in cache
-//		for(var i=0; i<fb.photos.length; i++){
-//
-//			(function(){
-//				
-//				//load images, store in arr
-//				var nimg = new Image();
-//				nimg.onload = function(){
-//
-//					fb.imgs.push({'i':nimg,'w':nimg.width,'h':nimg.height});
-//
-//					//load of all images complete
-//					if( fb.imgs.length === fb.photos.length ){
-//						testrot();
-//					}
-//
-//				}
-//				nimg.src = 'http://'+fb.photos[i]+'.jpg';
-//
-//			})();
-//
-//		}
-//
-//
-//		var testrot = function(){
-//
-//			//display
-//			var index = fb.imgs.length-1;
-//			var oint = setInterval(function(){
-//
-//				var ctx = $('#pg canvas')[0].getContext('2d');
-//
-//				var rot=0;
-//				var iint = setInterval(function(){
-//
-//					rot += 10;
-//					if( rot > 360 ){
-//						clearInterval(iint);
-//					}
-//
-//					var xoffset = 400;
-//					var yoffset = 300;
-//
-//					var w = fb.imgs[index].w;
-//					var h = fb.imgs[index].h;
-//					var angle = 5;
-//
-//					ctx.save();
-//
-//					ctx.clearRect(0, 0, 800, 600);	
-//					ctx.translate(xoffset,yoffset);
-//					ctx.rotate(rot * Math.PI / 180);
-//
-//					ctx.drawImage(fb.imgs[index].i, -w/2,-h/2);
-//
-//					ctx.restore();
-//
-//				},40);
-//
-//				index--;
-//				index === 0? clearInterval(oint):'';
-//
-//			},6000);
-//
-//		}
+			(function(){
+				var x = i;
+
+				//load images, store in arr
+				var nimg = new Image();
+				nimg.onload = function(){
+
+					//push the array to ensure proper ordering of photos
+					fb.imgs.push({'i':nimg,'w':nimg.width,'h':nimg.height});
+
+					//load of all images complete
+					if( fb.imgs.length === fb.photos.length ){
+						startanimation();
+					}
+
+				}
+				nimg.src = 'http://'+fb.photos[i]+'.jpg';
 
 
+			})();
+
+		}
+		
+		var startanimation = function(){
+
+			$('#show').show();
+
+			//set display area size
+			$('#show div').width( $(document).width()-50 )
+				.height( $(document).height()-50 )
+				.css('margin','25px');
+
+
+var dest = $('#show div');
+
+//ken burns
+var index=0;
+var kb = setInterval(function(){
+
+	var img = fb.imgs[index];
+
+	if( img.w > img.h ){
+		$(img.i).addClass('wide');
+	}else{
+		$(img.i).addClass('tall');
 	}
+	
+	//append image to display area
+	$(img.i).appendTo(dest);
+
+	//add ken burns class
+	//webkit is too fast. can't add the animation class for a microsecond
+	setTimeout(function(){
+
+		$(img.i).addClass('kb');
+	
+		var origin = Math.round(Math.random()*100 )+'%,'+Math.round(Math.random()*100)+'%';
+
+		$(img.i).css({
+			'-webkit-transform': 'scale(0.8) rotate('+ Math.round(40*Math.random()-20) +'deg)',
+			'-webkit-transform-origin': origin
+		});
+		
+		$(img.i).bind('webkitTransitionEnd',function(){
+
+			$(this).unbind();
+
+			$(this).css('-webkit-transform','scale(0.9) rotate('+ Math.round(40*Math.random()-20) +'deg)');
+
+			setTimeout(function(){
+				$(img.i).css({
+					'-webkit-transform':'scale(0.1) rotate('+ Math.round(40*Math.random()-20) +'deg)',
+					'-webkit-transform-origin': origin
+				});
+				
+				$(img.i).bind('webkitTransitionEnd',function(){
+					$(this).unbind();
+					
+					$(this).removeAttr('style').css('-webkit-transform-origin', origin);
+				});
+				
+			},2000);
+			
+		});
+		
+		
+	},1);
+
+	index === fb.imgs.length-1? clearInterval(kb): index++;
+
+},5000);
+
+		}
+
+	},
+	
+	css:function(){
+	
+	}
+
 }
-
-
-
 
 $(document).ready(function(){
 	//DEBUGGING ONLY. REMOVE IN THE END
@@ -354,11 +383,43 @@ $(document).ready(function(){
 
 	fb.init();
 });
-
-
 </script>
-
 <style type="text/css"> 
+
+#show img{
+    -webkit-transition-property: scale, opacity, rotate;
+    -webkit-transition-duration: 3s;
+	-webkit-transition-timing-function: ease-in-out;
+	-webkit-border-radius:20px;
+	-webkit-box-shadow: 1px 1px 10px #000;
+
+	-webkit-transform: scale(0.1);
+
+	border:20px solid #fff;		
+	opacity:0.0;
+
+	position:absolute;
+	left:50%;
+
+}
+
+#show img.kb{
+	opacity:1;
+}
+#show img.kb:hover{
+	-webkit-transform:scale(1.1);
+	z-index:9999;
+}
+
+.wide{
+	top:50%;
+	margin:-201px 0 0 -302px;
+}
+.tall{
+	top:50%;
+	margin:-302px 0 0 -201px;
+}
+ 
  
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
 ol, ul { list-style: none; }
@@ -378,15 +439,23 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #photopicker .c{
 	border:1px solid #cc0000;
 }
-body{position:relative;}
-/*#show{
+
+#show{
+	border:1px solid #000;
 	position:absolute;
-	width:600px;
-	height:400px;
 	top:0;
+	right:0;
+	bottom:0;
 	left:0;
-	border:200% solid #000;
-}*/
+	background: rgba(0, 0, 0, 0.6);
+	
+	display:none;
+}
+	#show div{
+		background-color:#000;
+		position:absolute;	
+	}
+
 </style>
 </head>
 <body>
@@ -399,7 +468,7 @@ body{position:relative;}
     </div>
     <div id="content">
         <h1>PopPhonic</h1>
-        <h2 id="fbname">Hi Tracy Osborn!</h2>
+        <h2 id="fbname"></h2>
         <p>Pick your Facebook photos below (up to 15) to include in the slideshow.</p>
         <div id="photopicker"></div>
         <form>
@@ -417,6 +486,6 @@ body{position:relative;}
         </form>
     </div>
 
-	<div id="show"><canvas></canvas></div>
+	<div id="show"><div></div></div>
 </body>
 </html>
