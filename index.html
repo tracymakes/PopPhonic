@@ -40,8 +40,9 @@ fbauth object in localStorage:
 <title>PopPhonic</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
 <script type="text/javascript" src="http://use.typekit.com/xjt7vjr.js"></script>
-<script type="text/javascript">try{Typekit.load();}catch(e){}</script>
 <script type="text/javascript">
+//init typekit
+try{Typekit.load();}catch(e){}
 
 var site = 'http://local.mac.com/popphonic/index.html';
 
@@ -248,8 +249,8 @@ var fb = {
 								});
 
 							}
-							
-						
+
+
 						});
 						
 						
@@ -294,8 +295,11 @@ var fb = {
 			})();
 
 		}
-		
+
 		var startanimation = function(){
+
+//test call for loading music
+fb.mp3();
 
 			$('#show').show();
 
@@ -305,70 +309,112 @@ var fb = {
 				.css('margin','25px');
 
 
-var dest = $('#show div');
+			//show lightbox
+			var dest = $('#show div');
 
-//ken burns
-var index=0;
-var kb = setInterval(function(){
+			//twisty animation
+			var index=0;
+			var kb = setInterval(function(){
 
-	var img = fb.imgs[index];
+				var img = fb.imgs[index];
 
-	if( img.w > img.h ){
-		$(img.i).addClass('wide');
-	}else{
-		$(img.i).addClass('tall');
-	}
+				if( img.w > img.h ){
+					$(img.i).addClass('wide');
+				}else{
+					$(img.i).addClass('tall');
+				}
 	
-	//append image to display area
-	$(img.i).appendTo(dest);
+				//append image to display area
+				$(img.i).appendTo(dest);
 
-	//add ken burns class
-	//webkit is too fast. can't add the animation class for a microsecond
-	setTimeout(function(){
 
-		$(img.i).addClass('kb');
-	
-		var origin = Math.round(Math.random()*100 )+'%,'+Math.round(Math.random()*100)+'%';
+//### NOTES:
+//### USE ONE ANIMATION FOR NOW. SPEED UP HOVER TRANSITION(WHEN VIEWING AFTER SLIDESHOW DONE). SPREAD OUT IMAGES WHEN DONE ANIMATING SO THEY DONT OVERLAP(fixed grid?)	
 
-		$(img.i).css({
-			'-webkit-transform': 'scale(0.8) rotate('+ Math.round(40*Math.random()-20) +'deg)',
-			'-webkit-transform-origin': origin
-		});
-		
-		$(img.i).bind('webkitTransitionEnd',function(){
+				//ANIMATION	
+				//webkit is too fast. can't add the animation class for a microsecond
+				setTimeout(function(){
 
-			$(this).unbind();
-
-			$(this).css('-webkit-transform','scale(0.9) rotate('+ Math.round(40*Math.random()-20) +'deg)');
-
-			setTimeout(function(){
-				$(img.i).css({
-					'-webkit-transform':'scale(0.1) rotate('+ Math.round(40*Math.random()-20) +'deg)',
-					'-webkit-transform-origin': origin
-				});
+					$(img.i).addClass('kb');
 				
-				$(img.i).bind('webkitTransitionEnd',function(){
-					$(this).unbind();
+					var origin = Math.round(Math.random()*100 )+'%,'+Math.round(Math.random()*100)+'%';
+
+					$(img.i).css({
+						'-webkit-transform': 'scale(0.8) rotate('+ Math.round(40*Math.random()-20) +'deg)',
+						'-webkit-transform-origin': origin
+					});
 					
-					$(this).removeAttr('style').css('-webkit-transform-origin', origin);
-				});
-				
-			},2000);
-			
-		});
-		
-		
-	},1);
+					$(img.i).bind('webkitTransitionEnd',function(){
 
-	index === fb.imgs.length-1? clearInterval(kb): index++;
+						$(this).unbind();
 
-},5000);
+						$(this).css('-webkit-transform','scale(0.9) rotate('+ Math.round(40*Math.random()-20) +'deg)');
+
+						setTimeout(function(){
+							$(img.i).css({
+								'-webkit-transform':'scale(0.5) rotate('+ Math.round(40*Math.random()-20) +'deg)',
+								'-webkit-transform-origin': origin
+							});
+							
+							$(img.i).bind('webkitTransitionEnd',function(){
+								$(this).unbind();
+								
+								$(this).removeAttr('style').css('-webkit-transform-origin', origin);
+							});
+							
+						},2000);
+						
+					});
+					
+					
+				},1);
+
+				index === fb.imgs.length-1? clearInterval(kb): index++;
+
+			},5000);
+
 
 		}
 
 	},
 	
-	css:function(){
+	mp3:function(){
+	
+		//token 1134388958
+		var token = 1134388958;
+		var user = 'geuis.teses@gmail.com';
+		var pass = 'teses0212';
+		
+		var session = '';
+
+		//authenticate
+		$.getJSON('https://shop.mp3tunes.com/api/v1/login?output=json&callback=?&username='+user+'&password='+pass+'&partner_token='+token, function(data){
+		
+			session = data.session_id;
+			
+			$.getJSON('http://ws.mp3tunes.com/api/v1/lockerData?output=json&callback=?&sid='+session+'&partner_token='+token+'&type=playlist', function(data){
+			
+				for(var i=0; i<data.playlistList.length; i++){
+
+					//only get popphonic playlist
+					if( data.playlistList[i].title === 'popphonic' ){
+						
+						$.getJSON('http://ws.mp3tunes.com/api/v1/lockerData?output=json&callback=?&sid='+session+'&partner_token='+token+'&type=track&playlist_id=' + data.playlistList[i].playlistId,function(data){
+							for(var x=0;x<data.trackList.length;x++){
+								console.log( data.trackList[0].playURL );
+								
+								$('#show div').append('<audio src="'+data.trackList[0].playURL+'" controls="controls" autoplay="autoplay"/>').find('audio')[0].play();
+							}
+						});
+						
+					}
+
+				}
+			
+			});
+			
+		});
+		
 	
 	}
 
@@ -394,7 +440,7 @@ $(document).ready(function(){
 	-webkit-border-radius:20px;
 	-webkit-box-shadow: 1px 1px 10px #000;
 
-	-webkit-transform: scale(0.1);
+	-webkit-transform: scale(0.3);
 
 	border:20px solid #fff;		
 	opacity:0.0;
@@ -488,5 +534,8 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
     </div>
 
 	<div id="show"><div></div></div>
+	
+<!--	<audio controls="controls" src="http://content.mp3tunes.com/storage/lockerplay/713071518551ea17154d6959298b281c?sid=f4d63269bde3dc90a3a60344be552bc7&partner_token=1134388958"/>-->
+
 </body>
 </html>
