@@ -467,7 +467,6 @@ $(document).ready(function(){
 	margin:-302px 0 0 -201px;
 }
 
-<style type="text/css"> 
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
 ol, ul { list-style: none; }
 html { background-color:#75b09e; border-top:10px solid #65948c; }
@@ -476,14 +475,19 @@ body { color:#2f5153; font:62.5%/1.6 'Lucida Grande', Arial, sans-serif; }
 /* #intro {  display:none; } */
 h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #intro a, #content a { background-color:#e3da91; text-decoration:none; color:#2f5153; padding:0.7em 3em; -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; display:inline-block; margin-top:20px; font-weight:bold; }
-#content { display:none; text-align:left; width:620px; margin-top:10px; overflow:hidden; }
+#intro a:hover, #content a:hover { background-color:#f3ebac; }
+#content { display:none; text-align:left; width:780px; margin-top:10px; position:relative; }
 #content h1 { font-size:1.2em; }
 #content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
-#photopicker { margin:20px 0;}
-#photopicker img { outline: 10px solid #75b09e; margin: 0 20px 20px 10px; }
-#content ul { margin-bottom:20px; width:45%; float:left; }
-#content a { float:right; }
-
+#photopicker { margin:20px 0 20px -10px; width:600px; float:left; }
+#photopicker img { outline: 10px solid #75b09e; margin: 0 15px 20px 10px; }
+#content #sidebar { width:180px; float:right; padding:20px; }
+#content form { background:rgba(0,0,0,0.1); -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; position:fixed; top:250px; padding:20px; width:160px; }
+#content ul { margin-bottom:20px; padding:0; }
+#content ul li { margin:0; }
+#content a { padding:0.7em 1em; text-align:center; }
+#content form p { margin-bottom:20px; }
+#content form p em { color:#E3DA91; font-weight:bold; font-style:normal; }
 #photopicker .c { outline: 10px solid #65948c; }
 
 #show{
@@ -518,19 +522,22 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
         <h2 id="fbname"></h2>
         <p>Pick your Facebook photos below (up to 15) to include in the slideshow.</p>
         <div id="photopicker"></div>
-        <form>
-            <ul id="music-choices">
-                <li><input type="radio" name="group1" value="" id="music1"><label for="music1">Music Choice #1</label></li>
-                <li><input type="radio" name="group1" value="" id="music2"><label for="music2">Music Choice #2</label></li>
-                <li><input type="radio" name="group1" value="" id="music3"><label for="music3">Music Choice #3</label></li>
-            </ul>
-            <ul id="transition-choices">
-                <li><input type="radio" name="group2" value="" id="transition1"><label for="transition1">Transition Choice #1</label></li>
-                <li><input type="radio" name="group2" value="" id="transition2"><label for="transition2">Transition Choice #2</label></li>
-                <li><input type="radio" name="group2" value="" id="transition3"><label for="transition3">Transition Choice #3</label></li>
-            </ul>
-            <a href="#" class="choose">Create your musical slideshow!</a>
-        </form>
+        <div id="sidebar">
+            <form>
+                <p>You have <em>15</em> spots left.</p>
+                <ul id="music-choices">
+                    <li><input type="radio" name="group1" value="" id="music1"><label for="music1">Music Choice #1</label></li>
+                    <li><input type="radio" name="group1" value="" id="music2"><label for="music2">Music Choice #2</label></li>
+                    <li><input type="radio" name="group1" value="" id="music3"><label for="music3">Music Choice #3</label></li>
+                </ul>
+                <!--<ul id="transition-choices">
+                    <li><input type="radio" name="group2" value="" id="transition1"><label for="transition1">Transition Choice #1</label></li>
+                    <li><input type="radio" name="group2" value="" id="transition2"><label for="transition2">Transition Choice #2</label></li>
+                    <li><input type="radio" name="group2" value="" id="transition3"><label for="transition3">Transition Choice #3</label></li>
+                </ul>-->
+                <a href="#" class="choose">Create your musical slideshow!</a>
+            </form>
+        </div>
     </div>
 
 	<div id="show"><div></div></div>
