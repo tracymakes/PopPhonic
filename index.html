@@ -157,7 +157,7 @@ var fb = {
 
 					//get ids from albums
 					var thumbs = [];
-
+					
 					for(var i=0; i<obj.data.length;i++){
 
 						//loops through all album ids to get their photos
@@ -176,11 +176,39 @@ var fb = {
 							
 							if( albumlen === 0 ){
 
+								//photo picker div
+								var ppd = $('#photopicker ul');
+
 								//populate photopicker with thumbnails
 								for(var i=0; i<thumbs.length; i++){
-									thumbs[i] = '<img src="'+ thumbs[i].t +'" s="'+ thumbs[i].s +'"/>'
+									thumbs[i] = '<li><img src="'+ thumbs[i].t +'" s="'+ thumbs[i].s +'"/></li>'
 								}
-								$('#photopicker').append(thumbs.join(''));
+								ppd.append(thumbs.join(''));
+
+								//set the width of the photo ul to half to get 2 rows
+								ppd.width( (thumbs.length * 150)/2 + 150 );
+
+			
+			
+								//add photo navigators
+								$('#photopicker').after('<div id="ln"></div><div id="rn"></div>');
+
+								var t = $('#photopicker ul');
+
+								//setup photopicker navigator
+								//margin-left
+								var ml = function(){ return parseInt(t.css('margin-left').replace('px','')) };
+
+								//nav left
+								$('#ln').click(function(){
+									ml() < 0 ? t.animate({'margin-left':ml()+600},150):'';
+								});
+
+								//nav right
+								$('#rn').click(function(){
+									Math.abs(ml()-600) < t.width() ? t.animate({'margin-left':ml()-600},150):'';
+								});
+
 
 								//user now chooses up to 24(?) photos
 								$('#photopicker img').live('click',function(){
@@ -218,11 +246,17 @@ var fb = {
 										}
 
 									}
-
-									//update photo count
-									//$('#op span').html( 15-fb.photos.length );
+									
+									//update user selectable photo count
+									$('#nl').html( 24-fb.photos.length );
 
 								});
+
+
+									//update number of images found
+									$('#nf').html( thumbs.length );
+
+
 
 
 								//preview button
@@ -472,28 +506,51 @@ ol, ul { list-style: none; }
 html { background-color:#75b09e; border-top:10px solid #65948c; }
 body { color:#2f5153; font:62.5%/1.6 'Lucida Grande', Arial, sans-serif; }
 #intro, #content { width:460px; margin:80px auto 80px auto; font-size:1.6em; text-align:center; }
-/* #intro {  display:none; } */
 h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #intro a, #content a { background-color:#e3da91; text-decoration:none; color:#2f5153; padding:0.7em 3em; -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; display:inline-block; margin-top:20px; font-weight:bold; }
 #intro a:hover, #content a:hover { background-color:#f3ebac; }
-#content { display:none; text-align:left; width:780px; margin-top:10px; position:relative; }
+#content { display:none; text-align:left; width:810px; margin-top:10px; position:relative; }
 #content h1 { font-size:1.2em; }
 #content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
-#photopicker { margin:20px 0 20px -10px; width:600px; float:left; }
-#photopicker img { margin: 0 25px 25px 10px; vertical-align:middle;
-	-webkit-box-shadow: 1px 1px 5px #000;
-    -webkit-transition-property: scale;
-    -webkit-transition-duration: 300ms;
-	-webkit-transition-timing-function: ease-in-out;	
+
+
+#photopicker { 
+margin:20px 0 20px -10px; width:600px; float:left; 
+overflow:hidden;
+position:relative;
 }
-	#photopicker img:hover{
-		-webkit-box-shadow: 1px 1px 8px #000;
-		-webkit-transform: scale(1.1);
-	}
-	#photopicker .c:hover{
-		-webkit-transform: scale(1.0);
-	}
+
+#photopicker img { /*margin: 0 25px 25px 10px;*/ vertical-align:middle; -webkit-box-shadow: 1px 1px 5px #000;-webkit-transition-property: scale; -webkit-transition-duration: 300ms;-webkit-transition-timing-function: ease-in-out;	}
+
+#photopicker img:hover{-webkit-box-shadow: 1px 1px 8px #000;-webkit-transform: scale(1.1);}
+#photopicker .c:hover{-webkit-transform: scale(1.0);}
 #photopicker .c { outline: 10px solid #65948c; }
+
+	
+
+#photopicker ul{
+	width:1000000px;
+}
+#content #photopicker ul li{
+	float:left;
+	width:150px;
+	height:130px;
+	line-height:130px;	
+	text-align:center;
+	margin:0 0 15px 0;
+}
+	
+#ln, #rn{
+	height:20px;
+	width:20px;
+	margin:150px 0 0 -623px;
+	float:left;
+	background-color:#000;
+}	
+	#rn{ 
+		float:right;
+		margin-right:200px;
+	}
 	
 #content #sidebar { width:180px; float:right; padding:20px; }
 #content form { background:rgba(0,0,0,0.1); -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; position:fixed; top:210px; padding:20px; width:160px; }
@@ -519,8 +576,6 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 		position:absolute;	
 	}
 
-
-
 </style>
 </head>
 <body>
@@ -534,12 +589,12 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
     <div id="content">
         <h1>PopPhonic</h1>
         <h2 id="fbname"></h2>
-        <p>Pick your Facebook photos below (up to 15) to include in the slideshow.</p>
-        <div id="photopicker"></div>
+        <p>Pick your Facebook photos below to include in the slideshow.</p>
+        <div id="photopicker"><ul></ul></div>
         <div id="sidebar">
             <form>
 				<p>Found <em id="nf">120</em> photos </p>	<!-- #nf = number of images found -->
-                <p>You have <em id="nl">15</em> spots left.</p>	<!-- #nl = number of images left to choose -->
+                <p>You have <em id="nl">24</em> spots left.</p>	<!-- #nl = number of images left to choose -->
                 <ul id="music-choices">
                     <li><input type="radio" name="group1" value="" id="music1"><label for="music1">Music Choice #1</label></li>
                     <li><input type="radio" name="group1" value="" id="music2"><label for="music2">Music Choice #2</label></li>
@@ -548,7 +603,8 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
                 <a href="#" class="choose">Create your musical slideshow!</a>
             </form>
         </div>
-    </div>
+    </div><br style="clear:both"/>
+	
 	<div id="show"><div></div></div>
 	
 </body>
