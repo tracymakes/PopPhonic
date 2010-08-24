@@ -437,7 +437,7 @@ var fb = {
 			session = data.session_id;
 			
 			$.getJSON('http://ws.mp3tunes.com/api/v1/lockerData?output=json&callback=?&sid='+session+'&partner_token='+token+'&type=playlist', function(data){
-			
+			console.log(data);
 				for(var i=0; i<data.playlistList.length; i++){
 
 					//only get popphonic playlist
@@ -487,18 +487,9 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #content { display:none; text-align:left; width:810px; margin-top:10px; position:relative; }
 #content h1 { font-size:1.2em; }
 #content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
-
 .typekit-badge{ display:none !important; }
-
-.wide{
-    top:50%;
-    margin:-201px 0 0 -302px;
-}
-
-.tall{
-    top:50%;
-    margin:-302px 0 0 -201px;
-}
+.wide{top:50%;margin:-201px 0 0 -302px;}
+.tall{top:50%;margin:-302px 0 0 -201px;}
 
 
 #photopicker { 
@@ -508,9 +499,7 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
     position:relative;
 }
 
-#photopicker img { 
-    /*margin: 0 25px 25px 10px;*/ vertical-align:middle; -webkit-box-shadow: 1px 1px 5px #000;-webkit-transition-property: scale; -webkit-transition-duration: 300ms;-webkit-transition-timing-function: ease-in-out;
-}
+#photopicker img {vertical-align:middle; -webkit-box-shadow: 1px 1px 5px #000;-webkit-transition-property: scale; -webkit-transition-duration: 300ms;-webkit-transition-timing-function: ease-in-out;}
 
 #photopicker img:hover{-webkit-box-shadow: 1px 1px 8px #000;-webkit-transform: scale(1.1);}
 #photopicker .c:hover{-webkit-transform: scale(1.0);}
