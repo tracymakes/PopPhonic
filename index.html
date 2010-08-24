@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
 <!--
+##REMAINING ISSUES!!##
+!! remove account references for bitly
+!! remove account references for mp3tunes
+#####
+
 Let users log into facebook and make animated transitions of their photos
 Users can pick music for the backgrounds
 Data is stored in the url itself. Bitly is used to create a shareable link
@@ -270,14 +275,19 @@ var fb = {
 
 								//done button
 								$('.choose').click(function(){
-
+									
 									if( fb.photos.length > 0 ){
 
 										//generate bitly link
 										$.getJSON('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab06875d2dac8&format=json&callback=?&longUrl=' + encodeURIComponent(site+'?p='+escape(fb.photos.join(','))) ,function(data){
-											$('#photopicker').empty().append("Here's the link to your slideshow: <input type='text' value='"+ data.data.url +"'/>");
+											$('#photopicker,#ln,#rn,#sidebar').hide();
+											$('#ms').html("Here's the link to your slideshow: <input type='text' value='"+ data.data.url +"'/>").find('input').focus();
 										});
 
+									}else{
+										
+										$(this).shake();
+										
 									}
 
 								});
@@ -490,6 +500,7 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 
 
 #photopicker { 
+	padding:10px 0 0 0;
     margin:20px 0 20px -10px; width:600px; float:left; 
     overflow:hidden;
     position:relative;
@@ -595,11 +606,11 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
     <div id="content">
         <h1>PopPhonic</h1>
         <h2 id="fbname"></h2>
-        <p>Pick your Facebook photos below to include in the slideshow.</p>
+        <p id="ms">Pick your Facebook photos below to include in the slideshow.</p>
         <div id="photopicker"><ul></ul></div>
         <div id="sidebar">
             <form>
-				<p>Found <em id="nf">120</em> photos </p>	<!-- #nf = number of images found -->
+				<p>Found <em id="nf"></em> photos </p>	<!-- #nf = number of images found -->
                 <p>You have <em id="nl">24</em> spots left.</p>	<!-- #nl = number of images left to choose -->
                 <ul id="music-choices">
                     <li><input type="radio" name="group1" value="" id="music1"><label for="music1">Music Choice #1</label></li>
@@ -609,7 +620,7 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
                 <a href="#" class="choose">Create your musical slideshow!</a>
             </form>
         </div>
-    </div><br style="clear:both"/>
+    </div>
 	
 	<div id="show"><div></div></div>
 	
