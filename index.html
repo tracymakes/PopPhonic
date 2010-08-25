@@ -138,6 +138,8 @@ var f = {
 			//animate photos
 			f.anim();
 
+			//cleanse
+			delete window.localStorage['fbauth'];
 		}else{
 
 			//get visitor state
@@ -525,5 +527,15 @@ audio, #show a{
     </div>
     <div id="show"><div><a href="#" >Make your own PopPhonic slideshow!</a><audio controls="controls"></audio></div></div>
 
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-273371-16']);
+		_gaq.push(['_trackPageview']);
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
 </body>
 </html>
