@@ -43,10 +43,10 @@ fbauth object in localStorage:
 <script type="text/javascript" src="http://use.typekit.com/xjt7vjr.js"></script>
 <script type="text/javascript">
 //init typekit
-//try{Typekit.load();}catch(e){}
+try{Typekit.load();}catch(e){}
 
 //set base sitename
-var site='http://'+location.host+location.pathname,
+var site = 'http://'+(location.hostname+'/'+location.pathname).replace(/\/\//gi,'/'),
 	gr = 'https://graph.facebook.com/', //base api url
 	get = $.getJSON;//shortcut for jquery getJSON
 
@@ -102,6 +102,11 @@ var f = {
 					'other';
 		}
 
+		$('#show a').click(function(){
+			delete window.localStorage['fbauth'];
+			location = site;
+		});
+
 		//search shortcut
 		var sr = location.search;
 		
@@ -121,8 +126,8 @@ var f = {
 			f.obj('state','watch');
 
 			//hide content screen
-			$("#intro, #music-choices, #transition-choices, .choose").hide();
-			$('#content').show();
+			//$("#intro, #music-choices, #transition-choices, .choose").hide();
+			$('#intro, #content').hide();
 			
 			//store photo urls
 			f.photos = unescape(q.p).split(',');
@@ -143,7 +148,8 @@ var f = {
 				//display intro
 
 				//config auth button
-				$('#connect').click(function(){
+				$('.login').click(function(e){
+					e.preventDefault();				
 					f.obj('state','auth');
 					window.location = 'https://graph.facebook.com/oauth/authorize?client_id=143905152304182&redirect_uri='+site+'&type=user_agent&display=popup&scope=user_photos';
 				});
@@ -167,10 +173,10 @@ var f = {
 				}
 				
 
-//get & set username
-get(gr+'me?access_token='+f.obj('access_token') + '&callback=?', function(obj){
-	$('#fbname').html('Hi '+obj.first_name+'!');
-});
+				//get & set username
+				get(gr+'me?access_token='+f.obj('access_token') + '&callback=?', function(obj){
+					$('#fbname').html('Hi '+obj.first_name+'!');
+				});
 
 				//get list of user albums
 				get(gr+'me/albums?access_token='+ f.obj('access_token') + '&callback=?', function(obj){
@@ -218,6 +224,7 @@ get(gr+'me?access_token='+f.obj('access_token') + '&callback=?', function(obj){
 									$('#music').append('<label><input type="radio" name="s" d="'+r+'">'+s[r].n+'</label>');
 								}
 
+								//user chooses music and hears it preview
 								$('#music input').live('click',function(){
 									//store the index of the song chosen
 									f.obj('mp3',$(this).attr('d'));
@@ -234,12 +241,14 @@ get(gr+'me?access_token='+f.obj('access_token') + '&callback=?', function(obj){
 								var ml = function(){ return parseInt(t.css('margin-left').replace('px','')) };
 
 								//nav left
-								$('#ln').click(function(){
+								$('#ln').click(function(e){
+									e.preventDefault();
 									ml() < 0 ? t.animate({'margin-left':ml()+600},150):'';
 								});
 
 								//nav right
-								$('#rn').click(function(){
+								$('#rn').click(function(e){
+									e.preventDefault();
 									Math.abs(ml()-600) < t.width() ? t.animate({'margin-left':ml()-600},150):'';
 								});
 
@@ -288,20 +297,19 @@ get(gr+'me?access_token='+f.obj('access_token') + '&callback=?', function(obj){
 
 								});
 
-
-									//update number of images found
-									$('#nf').html( thumbs.length );
+								//update number of images found
+								$('#nf').html( thumbs.length );
 
 								//done button
-								$('.choose').click(function(){
-
+								$('.choose').click(function(e){
+									e.preventDefault();
 									if( f.photos.length > 0 && f.obj('mp3') !== undefined){
 
-//generate bitly link
-get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab06875d2dac8&format=json&callback=?&longUrl=' + encodeURIComponent(site+'?p='+escape(f.photos.join(','))+'&m='+f.obj('mp3')), function(data){
-	$('#photopicker,#ln,#rn,#sidebar').hide();
-	$('#ms').html("Here's the link to your slideshow: <input type='text' value='"+ data.data.url +"'/>").find('input').focus();
-});
+										//generate bitly link
+										get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab06875d2dac8&format=json&callback=?&longUrl=' + encodeURIComponent(site+'?p='+escape(f.photos.join(','))+'&m='+f.obj('mp3')), function(data){
+											$('#photopicker,#ln,#rn,#sidebar').hide();
+											$('#ms').html("Here's the link to your slideshow: <input type='text' value='"+ data.data.url +"'/> <p><a target='_blank' href='http://www.facebook.com/sharer.php?u="+encodeURIComponent(data.data.url)+"&t="+encodeURIComponent("Just made a PopPhonic slideshow!")+"'>Share it on Facebook! </a></p>").find('input').focus();
+										});
 
 									}
 
@@ -332,6 +340,9 @@ get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab0687
 		//add audio tag and set music source
 		var mp3 = $('audio').attr('src', s[0]+(f.type==='moz'?s[f.ms].o+'.ogg':s[f.ms].m+'.mp3'))[0];
 
+		//add band data
+		$('#music a').clone().insertAfter('audio').css('float','left').text('Now Playing: '+ s[f.ms].n+' by Company Car');
+
 		//loads images and store in cache
 		for(var i=0; i<f.photos.length; i++){
 
@@ -356,7 +367,6 @@ get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab0687
 				}
 				nimg.src = 'http://'+f.photos[i]+'.jpg';
 
-
 			})();
 
 		}
@@ -368,8 +378,6 @@ get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab0687
 			//set display area size
 			$('#show div').width( $(document).width()-50 )
 				.height( $(document).height()-50 )
-				.css('margin','25px');
-
 
 			//show lightbox
 			var dest = $('#show div');
@@ -389,68 +397,36 @@ get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab0687
 				//append image to display area
 				$(img.i).appendTo(dest);
 
-
-//### NOTES:
-//### USE ONE ANIMATION FOR NOW. SPEED UP HOVER TRANSITION(WHEN VIEWING AFTER SLIDESHOW DONE). SPREAD OUT IMAGES WHEN DONE ANIMATING SO THEY DONT OVERLAP(fixed grid?)	
+				if( index > 0 ){
+					$(f.imgs[index-1].i).fadeOut(1000);
+				}
 
 				var rnd = function(){ return Math.round(40*Math.random()-20)+'deg'; }
 
-				//ANIMATION	
-				//webkit is too fast. can't add the animation class for a microsecond
-				setTimeout(function(){
+				$(img.i).css({
+					'left': (parseInt( (Math.random(1)<0.5?'-':'') + Math.round(Math.random()*15) ) + 50  + '% '),
+					'top' : (parseInt( (Math.random(1)<0.5?'-':'') + Math.round(Math.random()*15) ) + 50  + '% '),
+					'-webkit-transform': 'rotate('+rnd()+')',
+					'-moz-transform': 'rotate('+rnd()+')'
+				});
 
-					$(img.i).addClass('kb');
-
-					var origin = (parseInt( (Math.random(1)<0.5?'-':'') + Math.round(Math.random()*100) ) + 50  + '% ') + (parseInt( (Math.random(1)<0.5?'-':'') + Math.round(Math.random()*70) ) + 50  + '% ');
-
-					var transition = '-'+f.type+'-transition',
-						transform = '-'+f.type+'-transform',
-						transorig = '-'+f.type+'-transform-origin';
-
-
-					var obj = {};
-						obj[transform] = 'scale(0.8) rotate('+rnd()+')';
-						obj[transorig] = origin;
-						
-					$(img.i).css( obj );
+				var obj={'width':$(img.i).width()*0.75};
+				if(f.type==='ms')
+					obj.height = $(img.i).height()*0.75;
 					
-					$(img.i).bind('webkitTransitionEnd transitionend',function(){
+				$(img.i).css(obj);
 
-						$(this).unbind();
+				var obj={
+					'top':'50%',
+					'left':'50%',
+					'opacity':'1.0',
+					'width': $(img.i).width()/0.75
+				};
+				if(f.type==='ms')
+					obj.height = $(img.i).height()/0.75;
 
-						var obj={};
-							obj[transform]='scale(0.9) rotate('+rnd()+')';
-
-						//$(this).css('-webkit-transform','scale(0.9) rotate('+rnd()+')');
-						$(this).css(obj);
-						
-						setTimeout(function(){
-							var obj={};
-								obj[transform]='scale(0.5) rotate('+rnd()+')';
-								obj[transorig]=origin;
-							
-							$(img.i).css(obj);
-//							$(img.i).css({
-//								'-webkit-transform':'scale(0.5) rotate('+rnd()+')',
-//								'-webkit-transform-origin': origin
-//							});
-							
-							$(img.i).bind('webkitTransitionEnd transitionend',function(){
-								$(this).unbind();
-								var obj={};
-									obj[transorig]=origin;
-								$(this).removeAttr('style').css(obj);
-//								$(this).removeAttr('style').css('-webkit-transform-origin', origin);
-
-							});
-							
-						},5000);
-						
-					});
+				$(img.i).animate(obj,2000);
 					
-					
-				},1);
-
 				index === f.imgs.length-1? clearInterval(kb): index++;
 
 			},5000);
@@ -461,15 +437,7 @@ get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab0687
 	}
 
 }
-
 $(document).ready(function(){
-	//DEBUGGING ONLY. REMOVE IN THE END
-	$('#clear').click(function(){
-        delete window.localStorage['fbauth'];
-        window.location.hash = "";
-        window.location.reload();
-	});
-
 	f.init();
 });
 </script>
@@ -479,8 +447,9 @@ ol, ul { list-style: none; }
 html { background-color:#75b09e; border-top:10px solid #65948c; }
 body { color:#2f5153; font:62.5%/1.6 'Lucida Grande', Arial, sans-serif; }
 #intro, #content { width:460px; margin:80px auto 80px auto; font-size:1.6em; text-align:center; }
+#intro p{ margin-bottom:20px;}
 h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
-#intro a, #content a { background-color:#e3da91; text-decoration:none; color:#2f5153; padding:0.7em 3em; -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; display:inline-block; /*margin-top:20px*/; font-weight:bold; }
+#intro a, #content a, #show a { background-color:#e3da91; text-decoration:none; color:#2f5153; padding:0.7em 3em; -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; display:inline-block; /*margin-top:20px*/; font-weight:bold; }
 #intro a:hover, #content a:hover { background-color:#f3ebac; }
 #content { display:none; text-align:left; width:810px; margin-top:10px; position:relative; }
 #content h1 { font-size:1.2em; }
@@ -491,17 +460,10 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #music label{display:block;}
 #sidebar #music a{ font-size:12px; padding:8px; margin:0 0 3px 0;}
 #photopicker { padding:10px 0 0 0; margin:20px 0 20px -10px; width:600px; float:left; overflow:hidden; position:relative; }
+#photopicker img { vertical-align:middle; -webkit-box-shadow: 1px 1px 5px #000; -moz-box-shadow: 1px 1px 5px #000;box-shadow: 1px 1px 5px #000;}
+#photopicker img:hover{-webkit-box-shadow: 1px 1px 8px #000;-moz-box-shadow: 1px 1px 8px #000;box-shadow: 1px 1px 8px #000;}
+#photopicker .c, #content #photopicker .c:hover { outline: 10px solid #65948c; -moz-box-shadow:none}
 
-#photopicker img { vertical-align:middle; -webkit-box-shadow: 1px 1px 5px #000;
- -webkit-transition: -webkit-transform ease-in-out 300ms;
-}
-#photopicker img:hover{-webkit-box-shadow: 1px 1px 8px #000;
-	-webkit-transform: scale(1.1);
-}
-#photopicker .c:hover{-webkit-transform: scale(1.0);}
-
-
-#photopicker .c { outline: 10px solid #65948c; }
 #photopicker ul{ width:1000000px; }
 #content #photopicker ul li { float:left; width:150px; height:130px; line-height:130px; text-align:center; margin:0 0 15px 0; }
 #ln, #rn{ height:20px; width:20px; margin:150px 0 0 -623px; float:left; font-size:1.2em; }
@@ -516,35 +478,35 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 #content form p em { color:#E3DA91; font-weight:bold; font-style:normal; }
 
 /*slideshow animation*/
-#show{ border:1px solid #000; position:absolute; top:0px; right:0; bottom:0;left:0; background: rgba(0, 0, 0, 0.6); display:none; }
-#show div{ background-color:#000; position:absolute; }
+#show{ border:1px solid #000; position:absolute; top:0px; right:0; bottom:0;left:0; background: rgba(0, 0, 0, 0.6); display:none;}
+#show div{ background-color:#000; position:absolute; margin:25px;}
 
-#show img{ 
-	border:20px solid #fff; opacity:0.0; position:absolute; left:50%;
-	-webkit-transition-property: scale, opacity, rotate; 
-	-webkit-transition-duration: 3s; 
-	-webkit-transition-timing-function: ease-in-out; 
-	-webkit-border-radius:20px;
-	-webkit-box-shadow: 1px 1px 10px #000; 
-	-webkit-transform: scale(0.3);  
+#show img{
+	border:20px solid #fff; 
+	position:absolute; left:50%;
+	-moz-border-radius:20px; 
+	-webkit-border-radius:20px; 
+	border-radius:20px;
+	-webkit-box-shadow: 1px 1px 5px #000;	
+	-moz-box-shadow: 1px 1px 5px #000;	
+	box-shadow: 1px 1px 5px #000;
+	opacity:0;
+}
+#show a{
+	float:right;
+}
+audio, #show a{
+	margin:10px;
+	display:block;
 }
 
-#show img.kb { 
-	opacity:1; 
-	/*-webkit-transition: -webkit-transform ease-in-out 300ms;*/
-}
-#show img.kb:hover { 
-	z-index:9999;
-	-webkit-transform:scale(1.1);  
-}
 </style>
 </head>
 <body>
-    <input type="button" id="clear" value="CLEAR localStorage"/>	
     <div id="intro">
         <h1>PopPhonic</h1>
         <p>Place your Facebook images in a PopPhonic slideshow and get a musical experience to share with friends.</p>
-        <a href="#" class="login" id="connect">Log into Facebook to begin</a>
+        <a href="#" class="login">Log into Facebook to begin</a>
     </div>
     <div id="content">
         <h1>PopPhonic</h1>
@@ -556,12 +518,12 @@ h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
 			<!--#nl = number of images left to choose -->
 			<!-- #nf = number of images found -->
                 <p>Found <em id="nf"></em> photos<br/> <em id="nl">24</em> left to pick </p>
-				<p><div id="music"><a href="http://www.facebook.com/pages/Company-Car/6529427286">Music by Company Car</a></div></p>
+				<p><div id="music"><a href="http://www.facebook.com/pages/Company-Car/6529427286" target="_blank">Music by Company Car</a></div></p>
                 <a href="#" class="choose">Make your slideshow!</a>           		
-
             </form>
         </div>
     </div>
-    <div id="show"><div><audio controls="controls"></audio></div></div>
+    <div id="show"><div><a href="#" >Make your own PopPhonic slideshow!</a><audio controls="controls"></audio></div></div>
+
 </body>
 </html>
