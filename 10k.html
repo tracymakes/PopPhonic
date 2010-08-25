@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!--
+##REMAINING ISSUES!!##
+!! remove account references for bitly
+#####
+
+Let users log into facebook and make animated transitions of their photos
+Users can pick music for the backgrounds
+Data is stored in the url itself. Bitly is used to create a shareable link
+
+//Requirements
+User can't modify an existing album. They're generated automatically and randomly(each time?)
+User must agree to permissions for this to work
+Max bitly link is 2048 characters including http://... to the end of the url
+
+//Flow
+1)	Visitor visits app
+2)	App states:
+	New: never visited before
+	Auth: has just authenticated to facebook and is building a new album
+	Watch: visiting a pre-existing album, comes from bitly. Show album
+	Build: user was authenticated, now building their album
+	
+		*check for permissions. User must have approved all permissions. If missing permissions, show a warning and change to New state
+
+//Effects
+Ken Burns effect (zooming into and out of an image)
+Photo frames (see http://rockyou.com)
+Captions(?)
+Cross fades
+Spin-in/Spin-out
+
+fbauth object in localStorage:
+{
+	state:,
+	fbauth:
+}
+-->
+<title>PopPhonic</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://use.typekit.com/xjt7vjr.js"></script>
+<script type="text/javascript">
+//init typekit
+//try{Typekit.load();}catch(e){}
+
+//set base sitename
+var site='http://'+location.host+location.pathname,
+	gr = 'https://graph.facebook.com/', //base api url
+	get = $.getJSON;//shortcut for jquery getJSON
+
+//songs. store in array so the index is stored in bitly link for later playback
+//s[0]: api root, n:name, m: mp3, o:ogg
+var s = [	'http://bitspace.s3.amazonaws.com/tracks/',
+			{n:'The Other Side',m:'d6d1fc7613a3930d887d50ad8e2ff93b436ac38d',o:'164a69dbad6400697e23aad86627e877c1ff4da7'},
+			{n:'Stop Hitting Yourself',m:'b664864b7f3b61e6a6fc28bae64ace606d44c735',o:'cbf9397469802b0d1f45b3a59864872d51cfed2a'}
+		];
+
+var f = {
+	type: '',
+	photos:[], //used to record the images the user selects
+
+	//interacts with the localStorage fbauth object
+	obj: function(prop, val){
+
+		var str = window.localStorage;
+
+		//fbauth doesn't exist in localStorage so create it
+		!str['fbauth'] ? str['fbauth'] = '{"state":"new"}':true;
+
+		//local instance of object to work with
+		var fbobj = JSON.parse(str['fbauth']);
+
+		//set a value
+		if( prop && val ){
+
+			fbobj[prop] = val;
+			str['fbauth'] = JSON.stringify( fbobj );
+
+			return val;
+
+		}else if(prop && !val){
+			//return a value
+			return fbobj[prop];
+		}
+
+		//no arguments specified
+		return false;
+
+	},
+
+	init: function(){
+
+		//detect the browser type based on css capability
+		var l = document.documentElement;
+		if( l && (st=l.style ) ){
+			f.type = 'WebkitBorderRadius' in st? 'webkit':
+					'MozBorderRadius'in st? 'moz':
+					'filter' in st? 'ms': 
+					'borderRadius' in st? 'standard':
+					'other';
+		}
+
+		//search shortcut
+		var sr = location.search;
+		
+		//get search query variables
+		var q = {},
+			a = location.search.substring(1).split('&');
+		for(i in a){
+			var x = a[i].split('=');
+			q[x[0]] = x[1];
+		}
+		
+
+		//if the location search starts with ?p= this should be a view, i.e. someone followed a bitly link
+		if( 'p' in q ){
+
+			//change app state
+			f.obj('state','watch');
+
+			//hide content screen
+			$("#intro, #music-choices, #transition-choices, .choose").hide();
+			$('#content').show();
+			
+			//store photo urls
+			f.photos = unescape(q.p).split(',');
+
+			//store song index
+			f.ms = q.m;
+
+			//animate photos
+			f.anim();
+
+		}else{
+
+			//get visitor state
+			var state = f.obj('state');
+
+			//new
+			if( state === 'new' ){
+				//display intro
+
+				//config auth button
+				$('#connect').click(function(){
+					f.obj('state','auth');
+					window.location = 'https://graph.facebook.com/oauth/authorize?client_id=143905152304182&redirect_uri='+site+'&type=user_agent&display=popup&scope=user_photos';
+				});
+
+			}
+
+			//user is authenticated
+			if( state === 'auth' ){
+
+				//hide intro screen
+				$("#intro").hide();
+
+				//show content screen
+				$("#content").show();
+
+				//get auth token and expires from location hash and store
+				var a = location.hash.split('&');
+				for(var i=0; i<a.length; i++){
+					var b = a[i].replace('#','').split('=');
+					f.obj(b[0],b[1]);
+				}
+				
+
+//get & set username
+get(gr+'me?access_token='+f.obj('access_token') + '&callback=?', function(obj){
+	$('#fbname').html('Hi '+obj.first_name+'!');
+});
+
+				//get list of user albums
+				get(gr+'me/albums?access_token='+ f.obj('access_token') + '&callback=?', function(obj){
+
+					//cache number of albums
+					var albumlen = obj.data.length;
+
+					//get ids from albums
+					var thumbs = [];
+					
+					for(var i=0; i<obj.data.length;i++){
+
+						//loops through all album ids to get their photos
+						get(gr+ obj.data[i].id +'/photos?access_token='+ f.obj('access_token') + '&callback=?', function(photos){
+
+							//loops through photos in an album
+							for( var c=0; c<photos.data.length; c++ ){
+
+								//store the thumbnails for use in photo picker
+								thumbs.push( {'t':photos.data[c].picture, 's':photos.data[c].source.replace('http://','').replace('.jpg','') } );
+
+							}
+
+							//decrement album length counter 
+							albumlen--;
+							
+							if( albumlen === 0 ){
+
+								//photo picker div
+								var ppd = $('#photopicker ul');
+
+								//populate photopicker with thumbnails
+								for(var i=0; i<thumbs.length; i++){
+									thumbs[i] = '<li><img src="'+ thumbs[i].t +'" s="'+ thumbs[i].s +'"/></li>'
+								}
+								ppd.append(thumbs.join(''));
+
+								//set the width of the photo ul to half to get 2 rows
+								ppd.width( (thumbs.length * 150)/2 + 150 );
+
+
+								//setup music selection
+								for(var r=1;r<s.length;r++){
+									//'d' is the index of the music selection
+									$('#music').append('<label><input type="radio" name="s" d="'+r+'">'+s[r].n+'</label>');
+								}
+
+								$('#music input').live('click',function(){
+									//store the index of the song chosen
+									f.obj('mp3',$(this).attr('d'));
+								});
+			
+			
+								//add photo navigators
+								$('#photopicker').after('<div id="ln">&laquo;</div><div id="rn">&raquo;</div>');
+
+								var t = $('#photopicker ul');
+
+								//setup photopicker navigator
+								//margin-left
+								var ml = function(){ return parseInt(t.css('margin-left').replace('px','')) };
+
+								//nav left
+								$('#ln').click(function(){
+									ml() < 0 ? t.animate({'margin-left':ml()+600},150):'';
+								});
+
+								//nav right
+								$('#rn').click(function(){
+									Math.abs(ml()-600) < t.width() ? t.animate({'margin-left':ml()-600},150):'';
+								});
+
+
+
+
+								//user now chooses up to 24(?) photos
+								$('#photopicker img').live('click',function(){
+
+									//if image hasn't been selected i.e. doesn't have the 'c' class
+									if( !$(this).hasClass('c') ){
+
+										if( f.photos.length < 24 ){
+
+											//store the photo in the array
+											f.photos.push( $(this).attr('s') );
+
+											//add the 'clicked' class
+											$(this).addClass('c');
+
+										}
+
+									}else{
+
+										//get source url on current image
+										var t = $(this).attr('s');
+										for(var i=0;i<f.photos.length;i++){
+
+											//if the source is in the array
+											if( f.photos[i] === t ){
+
+												//remove it from the array
+												f.photos.splice(i,1);
+
+												//remove the class from the image
+												$(this).removeClass('c');
+
+											}
+
+										}
+
+									}
+									
+									//update user selectable photo count
+									$('#nl').html( 24-f.photos.length );
+
+								});
+
+
+									//update number of images found
+									$('#nf').html( thumbs.length );
+
+								//done button
+								$('.choose').click(function(){
+
+									if( f.photos.length > 0 && f.obj('mp3') !== undefined){
+
+//generate bitly link
+get('http://api.bit.ly/v3/shorten?login=geuis&apikey=R_62de32871ebbed8da29ab06875d2dac8&format=json&callback=?&longUrl=' + encodeURIComponent(site+'?p='+escape(f.photos.join(','))+'&m='+f.obj('mp3')), function(data){
+	$('#photopicker,#ln,#rn,#sidebar').hide();
+	$('#ms').html("Here's the link to your slideshow: <input type='text' value='"+ data.data.url +"'/>").find('input').focus();
+});
+
+									}
+
+								});
+
+							}
+
+
+						});
+						
+						
+					}
+				
+				});
+
+			}
+		
+		}
+
+	},
+
+	//container for canvased images
+	imgs:[],
+
+	//animation function for the photos
+	anim:function(){
+	
+		//add audio tag and set music source
+		var mp3 = $('audio').attr('src', s[0]+(f.type==='moz'?s[f.ms].o+'.ogg':s[f.ms].m+'.mp3'))[0];
+
+		//loads images and store in cache
+		for(var i=0; i<f.photos.length; i++){
+
+			(function(){
+				var x = i;
+
+				//load images, store in arr
+				var nimg = new Image();
+				nimg.onload = function(){
+
+					//push the array to ensure proper ordering of photos
+					f.imgs.push({'i':nimg,'w':nimg.width,'h':nimg.height});
+
+					//load of all images complete
+					if( f.imgs.length === f.photos.length ){
+						//start playing mp3
+						mp3.play();
+						
+						startanimation();
+					}
+
+				}
+				nimg.src = 'http://'+f.photos[i]+'.jpg';
+
+
+			})();
+
+		}
+
+		var startanimation = function(){
+
+			$('#show').show();
+
+			//set display area size
+			$('#show div').width( $(document).width()-50 )
+				.height( $(document).height()-50 )
+				.css('margin','25px');
+
+
+			//show lightbox
+			var dest = $('#show div');
+
+			//twisty animation
+			var index=0;
+			var kb = setInterval(function(){
+
+				var img = f.imgs[index];
+
+				if( img.w > img.h ){
+					$(img.i).addClass('wide');
+				}else{
+					$(img.i).addClass('tall');
+				}
+	
+				//append image to display area
+				$(img.i).appendTo(dest);
+
+
+//### NOTES:
+//### USE ONE ANIMATION FOR NOW. SPEED UP HOVER TRANSITION(WHEN VIEWING AFTER SLIDESHOW DONE). SPREAD OUT IMAGES WHEN DONE ANIMATING SO THEY DONT OVERLAP(fixed grid?)	
+
+				var rnd = function(){ return Math.round(40*Math.random()-20)+'deg'; }
+
+				//ANIMATION	
+				//webkit is too fast. can't add the animation class for a microsecond
+				setTimeout(function(){
+
+					$(img.i).addClass('kb');
+
+					var origin = (parseInt( (Math.random(1)<0.5?'-':'') + Math.round(Math.random()*100) ) + 50  + '% ') + (parseInt( (Math.random(1)<0.5?'-':'') + Math.round(Math.random()*70) ) + 50  + '% ');
+
+					var transition = '-'+f.type+'-transition',
+						transform = '-'+f.type+'-transform',
+						transorig = '-'+f.type+'-transform-origin';
+
+
+					var obj = {};
+						obj[transform] = 'scale(0.8) rotate('+rnd()+')';
+						obj[transorig] = origin;
+						
+					$(img.i).css( obj );
+					
+					$(img.i).bind('webkitTransitionEnd transitionend',function(){
+
+						$(this).unbind();
+
+						var obj={};
+							obj[transform]='scale(0.9) rotate('+rnd()+')';
+
+						//$(this).css('-webkit-transform','scale(0.9) rotate('+rnd()+')');
+						$(this).css(obj);
+						
+						setTimeout(function(){
+							var obj={};
+								obj[transform]='scale(0.5) rotate('+rnd()+')';
+								obj[transorig]=origin;
+							
+							$(img.i).css(obj);
+//							$(img.i).css({
+//								'-webkit-transform':'scale(0.5) rotate('+rnd()+')',
+//								'-webkit-transform-origin': origin
+//							});
+							
+							$(img.i).bind('webkitTransitionEnd transitionend',function(){
+								$(this).unbind();
+								var obj={};
+									obj[transorig]=origin;
+								$(this).removeAttr('style').css(obj);
+//								$(this).removeAttr('style').css('-webkit-transform-origin', origin);
+
+							});
+							
+						},5000);
+						
+					});
+					
+					
+				},1);
+
+				index === f.imgs.length-1? clearInterval(kb): index++;
+
+			},5000);
+
+
+		}
+
+	}
+
+}
+
+$(document).ready(function(){
+	//DEBUGGING ONLY. REMOVE IN THE END
+	$('#clear').click(function(){
+        delete window.localStorage['fbauth'];
+        window.location.hash = "";
+        window.location.reload();
+	});
+
+	f.init();
+});
+</script>
+<style type="text/css"> 
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-size: 100%; vertical-align: baseline; background: transparent; }
+ol, ul { list-style: none; }
+html { background-color:#75b09e; border-top:10px solid #65948c; }
+body { color:#2f5153; font:62.5%/1.6 'Lucida Grande', Arial, sans-serif; }
+#intro, #content { width:460px; margin:80px auto 80px auto; font-size:1.6em; text-align:center; }
+h1 { font-size:5em; color:#f3e6da; font-weight:normal; }
+#intro a, #content a { background-color:#e3da91; text-decoration:none; color:#2f5153; padding:0.7em 3em; -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; display:inline-block; /*margin-top:20px*/; font-weight:bold; }
+#intro a:hover, #content a:hover { background-color:#f3ebac; }
+#content { display:none; text-align:left; width:810px; margin-top:10px; position:relative; }
+#content h1 { font-size:1.2em; }
+#content h2 { margin-top:60px; color:#e3da91; font-weight:normal; font-size:1.4em; }
+.typekit-badge{ display:none !important; }
+.wide { top:50%; margin:-201px 0 0 -302px; }
+.tall { top:50%; margin:-302px 0 0 -201px; }
+#music label{display:block;}
+#sidebar #music a{ font-size:12px; padding:8px; margin:0 0 3px 0;}
+#photopicker { padding:10px 0 0 0; margin:20px 0 20px -10px; width:600px; float:left; overflow:hidden; position:relative; }
+
+#photopicker img { vertical-align:middle; -webkit-box-shadow: 1px 1px 5px #000;
+ -webkit-transition: -webkit-transform ease-in-out 300ms;
+}
+#photopicker img:hover{-webkit-box-shadow: 1px 1px 8px #000;
+	-webkit-transform: scale(1.1);
+}
+#photopicker .c:hover{-webkit-transform: scale(1.0);}
+
+
+#photopicker .c { outline: 10px solid #65948c; }
+#photopicker ul{ width:1000000px; }
+#content #photopicker ul li { float:left; width:150px; height:130px; line-height:130px; text-align:center; margin:0 0 15px 0; }
+#ln, #rn{ height:20px; width:20px; margin:150px 0 0 -623px; float:left; font-size:1.2em; }
+#ln:hover, #rn:hover { color:#577D7F; cursor:pointer; }
+#rn{ float:right; margin-right:200px; }
+#content #sidebar { width:180px; float:right; padding:20px; }
+#content form { background:rgba(0,0,0,0.1); -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; position:fixed; top:210px; padding:20px; width:160px; }
+#content ul { margin-bottom:20px; padding:0; }
+#content ul li { margin:0; }
+#content a { padding:0.7em 1em; text-align:center; }
+#content form p { margin-bottom:20px; }
+#content form p em { color:#E3DA91; font-weight:bold; font-style:normal; }
+
+/*slideshow animation*/
+#show{ border:1px solid #000; position:absolute; top:0px; right:0; bottom:0;left:0; background: rgba(0, 0, 0, 0.6); display:none; }
+#show div{ background-color:#000; position:absolute; }
+
+#show img{ 
+	border:20px solid #fff; opacity:0.0; position:absolute; left:50%;
+	-webkit-transition-property: scale, opacity, rotate; 
+	-webkit-transition-duration: 3s; 
+	-webkit-transition-timing-function: ease-in-out; 
+	-webkit-border-radius:20px;
+	-webkit-box-shadow: 1px 1px 10px #000; 
+	-webkit-transform: scale(0.3);  
+}
+
+#show img.kb { 
+	opacity:1; 
+	/*-webkit-transition: -webkit-transform ease-in-out 300ms;*/
+}
+#show img.kb:hover { 
+	z-index:9999;
+	-webkit-transform:scale(1.1);  
+}
+</style>
+</head>
+<body>
+    <input type="button" id="clear" value="CLEAR localStorage"/>	
+    <div id="intro">
+        <h1>PopPhonic</h1>
+        <p>Place your Facebook images in a PopPhonic slideshow and get a musical experience to share with friends.</p>
+        <a href="#" class="login" id="connect">Log into Facebook to begin</a>
+    </div>
+    <div id="content">
+        <h1>PopPhonic</h1>
+        <h2 id="fbname"></h2>
+        <p id="ms">Pick your Facebook photos below to include in the slideshow.</p>
+        <div id="photopicker"><ul></ul></div>
+        <div id="sidebar">
+            <form>
+			<!--#nl = number of images left to choose -->
+			<!-- #nf = number of images found -->
+                <p>Found <em id="nf"></em> photos<br/> <em id="nl">24</em> left to pick </p>
+				<p><div id="music"><a href="http://www.facebook.com/pages/Company-Car/6529427286">Music by Company Car</a></div></p>
+                <a href="#" class="choose">Make your slideshow!</a>           		
+
+            </form>
+        </div>
+    </div>
+    <div id="show"><div><audio controls="controls"></audio></div></div>
+</body>
+</html>
